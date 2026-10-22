@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+:root {
+  --green-dark: #166534;
+  --green-mid: #15803d;
+  --green-light: #22c55e;
+  --green-pale: #dcfce7;
+  --cream: #fefce8;
+  --brown-soft: #78350f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: linear-gradient(160deg, #f0fdf4 0%, #ecfdf5 40%, #fefce8 100%);
+  min-height: 100vh;
+}
+
+.tab-active {
+  background: var(--green-dark) !important;
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(22, 101, 52, 0.35);
+}
+
+.section-hidden { display: none !important; }
+
+.card-eco {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-eco:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(22, 101, 52, 0.18);
+}
+
+.qr-container {
+  background: white;
+  border: 3px dashed var(--green-light);
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+
+.toast {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  animation: slideIn 0.35s ease, fadeOut 0.4s ease 2.6s forwards;
+  min-width: 300px;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; pointer-events: none; }
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+  50% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+}
+
+.animate-pulse-green {
+  animation: pulse-green 1.5s infinite;
+}
+
+.points-badge {
+  background: linear-gradient(135deg, var(--green-light), var(--green-dark));
+  color: white;
+  font-weight: 800;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+}
+
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23166534' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
+}
