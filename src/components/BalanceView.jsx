@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Search } from 'lucide-react'
-import { Points } from '../services/points.js'
 import { useStore } from '../store.jsx'
 import PointsCore from './points/PointsCore.jsx'
 import HistoryList from './points/HistoryList.jsx'
@@ -24,7 +23,7 @@ function BalanceNotFound() {
     <div className="text-center py-10" data-testid="balance-state-notfound">
       <p className="text-tinta text-lg">No se encontró ninguna cuenta con ese correo.</p>
       <p className="text-suave text-sm mt-1">
-        Registra tu primer reciclaje en la sección <a href="#registrar" className="underline underline-offset-2 text-follaje font-semibold">Registrar</a>.
+        Registra tu primer reciclaje en la sección <a href="#registrar" className="rounded underline underline-offset-2 text-follaje font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signalInk focus-visible:ring-offset-2">Registrar</a>.
       </p>
     </div>
   )
@@ -42,7 +41,6 @@ export default function BalanceView() {
   return (
     <section id="saldo" className="bg-blanco py-16 sm:py-24" data-testid="section-balance">
       <div className="wrap">
-        <p className="kicker kiss">Consulta tu saldo</p>
         <h2 className="section-title">Mi saldo de puntos</h2>
 
         <div className="card max-w-3xl">
@@ -58,6 +56,7 @@ export default function BalanceView() {
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="tu@correo.com"
+              aria-label="Correo electrónico"
               className="field flex-1"
             />
             <button id="lookup-btn" type="button" onClick={onSearch} className="btn btn--follaje sm:px-8">
@@ -65,7 +64,7 @@ export default function BalanceView() {
             </button>
           </div>
 
-          <div className="mt-6 border-t border-follaje/10 pt-6" data-testid="balance-result">
+          <div className="mt-6 border-t border-follaje/10 pt-6" aria-live="polite" data-testid="balance-result">
             {state.balance === null && <BalanceEmpty />}
             {state.balance && !state.balance.found && <BalanceNotFound />}
             {state.balance && state.balance.found && (

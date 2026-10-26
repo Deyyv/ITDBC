@@ -20,6 +20,10 @@ marked as advice.
   `TwinCanvas` and every module that imports three.js load through `React.lazy`.
 - Hardware constants (sensors, servo, part transforms, colours) live only in
   `src/lib/basket/config.ts`.
+- Legacy exception: the legacy views (`RegisterView`, `BalanceView`, `StoresView`, `PublicView`)
+  still read points and discounts from `src/services/` until they are migrated to `src/lib/`.
+  Importing those services from the legacy views is not a violation; new code must not add more
+  logic to `src/services/`.
 
 ## TypeScript
 

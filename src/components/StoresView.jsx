@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Store, Scale, Inbox, QrCode, Percent } from 'lucide-react'
 import { STORES } from '../data/stores.js'
 import { DISCOUNT_TIERS, getDiscountForMg, MIN_WEIGHT_LABEL } from '../services/discounts.js'
@@ -124,16 +124,12 @@ function CouponHistory({ coupons }) {
 export default function StoresView() {
   const { state, generateCoupon, clearCoupon } = useStore()
   const [selectedStore, setSelectedStore] = useState(null)
-  const [coupons, setCoupons] = useState([])
 
   const currentEmail = state.currentEmail
   const user = currentEmail ? DB.getUser(currentEmail) : null
   const lastDelivery = user ? user.lastDelivery : null
   const availableDiscount = lastDelivery ? getDiscountForMg(lastDelivery.mg) : null
-
-  useEffect(() => {
-    setCoupons(user && user.coupons ? user.coupons : [])
-  }, [currentEmail, state.lastCoupon]) // eslint-disable-line react-hooks/exhaustive-deps
+  const coupons = user && user.coupons ? user.coupons : []
 
   const handleSelect = (store) => {
     setSelectedStore(store)
@@ -143,8 +139,7 @@ export default function StoresView() {
   return (
     <section id="tiendas" className="bg-lavada py-16 sm:py-24" data-testid="section-shop">
       <div className="wrap">
-        <p className="kicker kiss">Tiendas aliadas</p>
-        <h2 className="section-title">Genera tu cupón de descuento</h2>
+        <h2 className="section-title">Genera tu cupón de descuento en una tienda aliada</h2>
         <p className="text-suave max-w-[52ch] mb-8">
           Elige una tienda aliada y genera tu QR de descuento a partir del peso que reciclaste.
         </p>
@@ -161,7 +156,7 @@ export default function StoresView() {
         <div className="mb-6"><ScaleTable /></div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {STORES.map((store, idx) => {
+          {STORES.map((store) => {
             const Icon = store.Icon
             const active = selectedStore && selectedStore.id === store.id
             return (
@@ -178,7 +173,7 @@ export default function StoresView() {
                   </span>
                 </div>
                 <div className="p-6 flex flex-col gap-2 flex-1">
-                  <p className="producto-tag">Tienda aliada 0{idx + 1}</p>
+                  <p className="producto-tag">Tienda aliada</p>
                   <h3 className="font-disp font-medium text-[1.55rem] tracking-tight text-tinta">{store.name}</h3>
                   <p className="text-suave text-sm font-semibold">{store.tagline}</p>
                   <p className="text-suave text-[0.95rem] flex-1">{store.desc}</p>
@@ -192,11 +187,9 @@ export default function StoresView() {
           })}
         </div>
 
-        {state.lastCoupon && (
-          <div className="mt-6 max-w-3xl">
-            <CouponCard coupon={state.lastCoupon} onClose={clearCoupon} />
-          </div>
-        )}
+        <div className="mt-6 max-w-3xl empty:hidden" aria-live="polite">
+          {state.lastCoupon && <CouponCard coupon={state.lastCoupon} onClose={clearCoupon} />}
+        </div>
 
         <CouponHistory coupons={coupons} />
       </div>
