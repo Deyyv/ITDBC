@@ -1,7 +1,13 @@
 /** Screen-reader announcements and on-screen explanations for each machine state. */
 import { formatKg } from '../format'
-import { IDLE_WITH_COUPON_HELP, MACHINE_STATE_HELP, MACHINE_STATE_LABEL } from './config'
-import type { MachineStateName } from './types'
+import {
+  CAMERA_PRESETS,
+  IDLE_WITH_COUPON_HELP,
+  MACHINE_STATE_HELP,
+  MACHINE_STATE_LABEL,
+  PART_BY_ID,
+} from './config'
+import type { CameraPreset, MachineStateName, PartId } from './types'
 
 export type StationSnapshot = {
   state: MachineStateName
@@ -36,6 +42,39 @@ export function stationAnnouncement({ state, discountPct, stableKg, coupon }: St
         ? `Listo para un nuevo depósito. Último cupón ${coupon.code} con ${coupon.pct} por ciento de descuento.`
         : 'Esperando material. La galga está en cero.'
   }
+}
+
+/** What the viewer can change on the 3D twin itself (machine states are announced elsewhere). */
+export type TwinViewState = {
+  view: CameraPreset
+  xray: boolean
+  selectedPartId: PartId | null
+}
+
+function viewAnnouncement(view: CameraPreset): string {
+  if (view === 'exploded') return 'Vista explosionada. Las piezas del ensamblaje se muestran separadas.'
+  return `Vista ${CAMERA_PRESETS[view].label.toLowerCase()}.`
+}
+
+/**
+ * Sentence for the polite live region of the twin, describing only what differs between two view
+ * states: camera view (including the exploded one), X-ray and the selected part. Returns an empty
+ * string when none of them changed.
+ */
+export function twinAnnouncement(previous: TwinViewState, next: TwinViewState): string {
+  const sentences: string[] = []
+  if (next.view !== previous.view) sentences.push(viewAnnouncement(next.view))
+  if (next.xray !== previous.xray) {
+    sentences.push(next.xray ? 'Rayos X activados.' : 'Rayos X desactivados.')
+  }
+  if (next.selectedPartId !== previous.selectedPartId) {
+    sentences.push(
+      next.selectedPartId
+        ? `Pieza seleccionada: ${PART_BY_ID[next.selectedPartId].label}.`
+        : 'Información de la pieza cerrada.',
+    )
+  }
+  return sentences.join(' ')
 }
 
 export type StationStatus = {

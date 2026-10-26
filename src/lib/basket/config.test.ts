@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { CAMERA_PRESETS, ELECTRONICS, PART_BY_ID, RING, SENSOR_ANCHORS, SLEEVE } from './config'
+import {
+  CAMERA_PRESETS,
+  ELECTRONICS,
+  ITEM_CLEARANCE_MM,
+  ITEM_REST_Y_MM,
+  MATERIALS,
+  PART_BY_ID,
+  RING,
+  SENSOR_ANCHORS,
+  SLEEVE,
+} from './config'
 
 describe('electronics box placement', () => {
   const [, boxY, boxZ] = ELECTRONICS.boxPosition
@@ -27,6 +37,15 @@ describe('electronics box placement', () => {
     expect(anchorY).toBeGreaterThan(boxY)
     expect(anchorY).toBeLessThan(boxY + boxHeight)
     expect(anchorZ).toBeGreaterThan(boxZ + boxDepth)
+  })
+})
+
+describe('item rest heights', () => {
+  it('cover every material with a positive height', () => {
+    for (const material of MATERIALS) {
+      expect(ITEM_REST_Y_MM[material.id]).toBeGreaterThan(0)
+      expect(ITEM_CLEARANCE_MM[material.id]).toBeGreaterThan(0)
+    }
   })
 })
 

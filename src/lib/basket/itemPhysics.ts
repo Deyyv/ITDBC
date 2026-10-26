@@ -2,10 +2,10 @@
  * Tiny kinematic model for the deposited items: gravity, one or two damped bounces, no physics
  * engine. Bodies are mutated in place because the 3D scene advances them every frame.
  */
-import { BIN, FLAP, FLAP_HOLE } from './config'
+import { BIN, FLAP, FLAP_HINGE, FLAP_HOLE, SERVO_CONFIG } from './config'
 import { pileHeightMm } from './fillLevel'
 import { mulberry32 } from './rng'
-import type { FlapHinge, Vec3 } from './types'
+import type { DepositItemState, FlapHinge, Vec3 } from './types'
 
 /** Slowed-down gravity (mm/s^2) so the fall is readable on screen. */
 export const GRAVITY_MM_S2 = 2200
@@ -13,6 +13,15 @@ export const SPAWN_Y_MM = 340
 export const RESTITUTION = 0.32
 export const MAX_BOUNCES = 2
 const MIN_BOUNCE_SPEED = 90
+
+/** Speed (mm/s) at which items slide along a fully tilted flap. */
+export const SLIDE_MM_S = 420
+/** Largest frame step (s) integrated in one go; protects against throttled tabs. */
+export const MAX_FRAME_S = 1 / 30
+/** Rate (1/s) of the exponential easing of x/z (and of the pile height) towards a pile slot. */
+export const GLIDE_RATE_PER_S = 6
+/** Flap opening (rad) under which the flaps count as closed. */
+const FLAPS_CLOSED_RAD = 0.05
 
 /** Half extents (mm) of the area where the pile may form inside the bin. */
 export const PILE_HALF_X = 95
@@ -188,4 +197,115 @@ export function flapSurfaceY(z: number, thetaRad: number, hinge: FlapHinge): num
 
   const along = distance / cos
   return along <= FLAP.widthMm ? FLAP.topY - distance * Math.tan(thetaRad) : null
+}
+
+/** Flap opening angle (rad) for a servo angle: the flaps follow the servo linearly. */
+export function flapAngleRad(servoDeg: number): number {
+  return ((servoDeg / SERVO_CONFIG.openDeg) * FLAP.openDeg * Math.PI) / 180
+}
+
+/** Frame step (s) actually simulated for a raw frame delta. */
+export function clampFrameS(deltaS: number): number {
+  return Math.min(deltaS, MAX_FRAME_S)
+}
+
+/** Fraction of the remaining distance covered in `dtS` seconds when easing towards a target. */
+export function glideFactor(dtS: number): number {
+  return 1 - Math.exp(-GLIDE_RATE_PER_S * dtS)
+}
+
+/** Eases the body's x/z towards a pile slot by the fraction `glide` (see `glideFactor`). */
+export function glideToward(body: Body, slot: Vec3, glide: number): void {
+  body.x += (slot[0] - body.x) * glide
+  body.z += (slot[2] - body.z) * glide
+}
+
+/** Eases the body's height towards `targetY` by the fraction `glide`. */
+export function glideHeight(body: Body, targetY: number, glide: number): void {
+  body.y += (targetY - body.y) * glide
+}
+
+/**
+ * Puts the body at rest on the floor right away (reduced motion): no fall, no bounce, no leftover
+ * velocity or tilt.
+ */
+export function restOnFloor(body: Body, floorY: number): void {
+  body.y = floorY
+  body.vy = 0
+  body.vx = 0
+  body.vz = 0
+  body.rx = 0
+  body.rz = 0
+  body.resting = true
+}
+
+/** Advances the body against the floor, or snaps it onto the floor when motion is reduced. */
+export function stepOrSnap(body: Body, dtS: number, floorY: number, reducedMotion: boolean): void {
+  if (reducedMotion) {
+    restOnFloor(body, floorY)
+    return
+  }
+  stepBody(body, dtS, floorY)
+}
+
+/**
+ * Slides the body along the tilting flap, along z: towards the opening when the flaps hinge at the
+ * walls, away from the centre line when they hinge at the centre. The shift never exceeds the
+ * body's distance from the centre line, so it cannot cross it.
+ */
+export function slideOnFlap(body: Body, thetaRad: number, dtS: number, hinge: FlapHinge): void {
+  const direction = hinge === 'walls' ? -Math.sign(body.z) : Math.sign(body.z)
+  body.z += direction * Math.min(Math.abs(body.z), SLIDE_MM_S * Math.sin(thetaRad) * dtS)
+}
+
+/** Everything `advanceItem` needs to move one item for one frame. */
+export type ItemFrame = {
+  state: DepositItemState
+  /** Pile slot (mm) the item settles into after the dump, once it has one. */
+  slot: Vec3 | undefined
+  /** Raw frame delta (s); clamped internally. */
+  deltaS: number
+  servoDeg: number
+  /** Height (mm) of the item's centre above the surface it rests on. */
+  restMm: number
+  reducedMotion: boolean
+  /** Flap layout; defaults to the configured one. */
+  hinge?: FlapHinge
+}
+
+/**
+ * Moves one deposited item for one frame: it falls onto the closed flaps, rides the opening flaps
+ * down, drops into the bin and then follows its slot in the pile. With reduced motion it jumps
+ * straight to where it would end up.
+ */
+export function advanceItem(body: Body, frame: ItemFrame): void {
+  const { state, slot, restMm, reducedMotion, hinge = FLAP_HINGE } = frame
+  const dtS = clampFrameS(frame.deltaS)
+  const glide = glideFactor(dtS)
+  const flapFloor = FLAP.topY + restMm
+  const binFloor = BIN.floorY + restMm
+
+  if (state === 'falling' || state === 'onFlaps') {
+    stepOrSnap(body, dtS, flapFloor, reducedMotion)
+  } else if (state === 'dumping') {
+    const theta = flapAngleRad(frame.servoDeg)
+    const surface = flapSurfaceY(body.z, theta, hinge)
+    if (surface !== null && !reducedMotion) {
+      // Still on the tilting flap: ride it down and slide towards the opening.
+      slideOnFlap(body, theta, dtS, hinge)
+      stepOrSnap(body, dtS, surface + restMm, reducedMotion)
+    } else {
+      const target = slot ? Math.max(slot[1], binFloor) : binFloor
+      if (slot) glideToward(body, slot, glide)
+      stepOrSnap(body, dtS, theta < FLAPS_CLOSED_RAD ? flapFloor : target, reducedMotion)
+    }
+  } else if (slot) {
+    glideToward(body, slot, glide)
+    const target = Math.max(slot[1], binFloor)
+    if (body.resting) {
+      glideHeight(body, target, glide)
+    } else {
+      stepOrSnap(body, dtS, target, reducedMotion)
+    }
+  }
 }

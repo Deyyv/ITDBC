@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { stationAnnouncement, stationStatus } from './announce'
-import { IDLE_WITH_COUPON_HELP, MACHINE_STATE_HELP, MACHINE_STATE_LABEL } from './config'
+import { stationAnnouncement, stationStatus, twinAnnouncement, type TwinViewState } from './announce'
+import {
+  CAMERA_PRESET_ORDER,
+  CAMERA_PRESETS,
+  IDLE_WITH_COUPON_HELP,
+  MACHINE_STATE_HELP,
+  MACHINE_STATE_LABEL,
+  PART_DEFS,
+} from './config'
 import type { MachineStateName } from './types'
 
 const STATES: readonly MachineStateName[] = [
@@ -33,6 +40,61 @@ describe('stationAnnouncement', () => {
     const coupon = { code: 'RP-TEST42', pct: 11 }
     expect(stationAnnouncement({ state: 'qr', discountPct: 11, stableKg: 1.9, coupon })).toContain('RP-TEST42')
     expect(stationAnnouncement({ state: 'idle', discountPct: 11, stableKg: 1.9, coupon })).toContain('RP-TEST42')
+  })
+})
+
+describe('twinAnnouncement', () => {
+  const base: TwinViewState = { view: 'iso', xray: false, selectedPartId: null }
+
+  it('stays silent when nothing the viewer controls has changed', () => {
+    expect(twinAnnouncement(base, { ...base })).toBe('')
+  })
+
+  it('names each camera view', () => {
+    for (const view of CAMERA_PRESET_ORDER) {
+      if (view === 'iso') continue
+      const text = twinAnnouncement(base, { ...base, view })
+      expect(text.startsWith('Vista ')).toBe(true)
+      expect(text.toLowerCase()).toContain(CAMERA_PRESETS[view].label.toLowerCase())
+    }
+    expect(twinAnnouncement(base, { ...base, view: 'front' })).toBe('Vista frontal.')
+  })
+
+  it('explains that the exploded view separates the parts', () => {
+    const text = twinAnnouncement(base, { ...base, view: 'exploded' })
+    expect(text).toContain('explosionada')
+    expect(text).toContain('separadas')
+  })
+
+  it('reports X-ray turning on and off', () => {
+    expect(twinAnnouncement(base, { ...base, xray: true })).toBe('Rayos X activados.')
+    expect(twinAnnouncement({ ...base, xray: true }, base)).toBe('Rayos X desactivados.')
+  })
+
+  it('reads the name of the selected part for every part', () => {
+    for (const part of PART_DEFS) {
+      const text = twinAnnouncement(base, { ...base, selectedPartId: part.id })
+      expect(text).toBe(`Pieza seleccionada: ${part.label}.`)
+    }
+  })
+
+  it('reports when the part card is closed', () => {
+    const selected: TwinViewState = { ...base, selectedPartId: 'bandeja' }
+    expect(twinAnnouncement(selected, base)).toBe('Información de la pieza cerrada.')
+  })
+
+  it('combines several simultaneous changes in one sentence', () => {
+    const text = twinAnnouncement(base, { view: 'top', xray: true, selectedPartId: 'bandeja' })
+    expect(text).toBe('Vista superior. Rayos X activados. Pieza seleccionada: Bandeja (compuerta).')
+  })
+
+  it('never repeats machine-state wording', () => {
+    const everything = CAMERA_PRESET_ORDER.map((view) =>
+      twinAnnouncement(base, { view, xray: true, selectedPartId: 'cesta-inferior' }),
+    ).join(' ')
+    for (const label of Object.values(MACHINE_STATE_LABEL)) {
+      expect(everything).not.toContain(label)
+    }
   })
 })
 

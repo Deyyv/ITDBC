@@ -16,8 +16,8 @@ marked as advice.
 - Domain logic is pure and framework-free in `src/lib/` (discount, coupon, basket simulation).
   Components never compute discounts, sensor readings or state transitions themselves.
 - Hooks in `src/hooks/` orchestrate timers and state; components in `src/components/` only render.
-- The 3D twin is lazy-loaded; nothing under `src/components/twin/` may be imported eagerly from the
-  initial bundle.
+- The 3D twin is lazy-loaded. Only `TwinStage`, `TwinHud` and `twin/types` may be imported eagerly;
+  `TwinCanvas` and every module that imports three.js load through `React.lazy`.
 - Hardware constants (sensors, servo, part transforms, colours) live only in
   `src/lib/basket/config.ts`.
 

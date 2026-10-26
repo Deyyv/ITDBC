@@ -1,15 +1,32 @@
 import { describe, expect, it } from 'vitest'
-import { BIN, FLAP, FLAP_HOLE, ITEM_CLEARANCE_MM } from './config'
+import { BIN, FLAP, FLAP_HOLE, ITEM_CLEARANCE_MM, ITEM_REST_Y_MM, SERVO_CONFIG } from './config'
 import {
+  GLIDE_RATE_PER_S,
+  MAX_FRAME_S,
   PILE_HALF_X,
   PILE_HALF_Z,
+  SLIDE_MM_S,
+  advanceItem,
+  clampFrameS,
+  flapAngleRad,
   flapSurfaceY,
+  glideFactor,
+  glideHeight,
+  glideToward,
   pileTarget,
+  restOnFloor,
+  slideOnFlap,
   spawnBody,
   spawnZRange,
   stepBody,
+  stepOrSnap,
+  type Body,
+  type ItemFrame,
 } from './itemPhysics'
 import { mulberry32, nextSeed } from './rng'
+import type { Vec3 } from './types'
+
+const rad = (deg: number) => (deg * Math.PI) / 180
 
 describe('stepBody', () => {
   const simulate = (floorY: number, seconds: number) => {
@@ -120,8 +137,6 @@ describe('pileTarget', () => {
 })
 
 describe('flapSurfaceY', () => {
-  const rad = (deg: number) => (deg * Math.PI) / 180
-
   it('is the closed flap top across both flaps and empty past the hinges', () => {
     expect(flapSurfaceY(60, 0, 'walls')).toBe(FLAP.topY)
     expect(flapSurfaceY(-60, 0, 'walls')).toBe(FLAP.topY)
@@ -144,5 +159,250 @@ describe('flapSurfaceY', () => {
   it('supports the center-hinge variant from the middle outwards', () => {
     expect(flapSurfaceY(5, rad(30), 'center')).toBeCloseTo(FLAP.topY - 5 * Math.tan(rad(30)), 6)
     expect(flapSurfaceY(FLAP.widthMm, rad(30), 'center')).toBeNull()
+  })
+})
+
+describe('frame timing', () => {
+  it('caps the simulated step so a throttled tab cannot launch the items', () => {
+    expect(clampFrameS(1 / 60)).toBe(1 / 60)
+    expect(clampFrameS(2)).toBe(MAX_FRAME_S)
+  })
+
+  it('eases exponentially: nothing at dt = 0, never past the target', () => {
+    expect(glideFactor(0)).toBe(0)
+    expect(glideFactor(1 / 60)).toBeCloseTo(1 - Math.exp(-GLIDE_RATE_PER_S / 60), 12)
+    expect(glideFactor(1 / 30)).toBeGreaterThan(glideFactor(1 / 60))
+    expect(glideFactor(1)).toBeLessThan(1)
+  })
+
+  it('is independent of how a second is sliced', () => {
+    const remaining = (steps: number) => (1 - glideFactor(1 / steps)) ** steps
+    expect(remaining(30)).toBeCloseTo(remaining(120), 12)
+  })
+})
+
+describe('flapAngleRad', () => {
+  it('follows the servo linearly from closed to the full flap opening', () => {
+    expect(flapAngleRad(0)).toBe(0)
+    expect(flapAngleRad(SERVO_CONFIG.openDeg)).toBeCloseTo(rad(FLAP.openDeg), 12)
+    expect(flapAngleRad(SERVO_CONFIG.openDeg / 2)).toBeCloseTo(rad(FLAP.openDeg) / 2, 12)
+  })
+})
+
+describe('glideToward and glideHeight', () => {
+  it('moves x and z a fraction of the way to the slot and leaves y alone', () => {
+    const body = spawnBody(3)
+    const { x: x0, y, z: z0 } = body
+    const slot: Vec3 = [x0 + 40, 100, z0 - 20]
+    glideToward(body, slot, 0.25)
+    expect(body.x).toBeCloseTo(x0 + 10, 10)
+    expect(body.z).toBeCloseTo(z0 - 5, 10)
+    expect(body.y).toBe(y)
+  })
+
+  it('converges on the slot without overshooting', () => {
+    const body = spawnBody(4)
+    const slot: Vec3 = [50, 0, -60]
+    const glide = glideFactor(1 / 60)
+    let previous = Math.abs(body.x - slot[0])
+    for (let step = 0; step < 600; step += 1) {
+      glideToward(body, slot, glide)
+      const distance = Math.abs(body.x - slot[0])
+      expect(distance).toBeLessThanOrEqual(previous)
+      previous = distance
+    }
+    expect(body.x).toBeCloseTo(50, 3)
+    expect(body.z).toBeCloseTo(-60, 3)
+  })
+
+  it('eases the height towards a target', () => {
+    const body = spawnBody(5)
+    body.y = 100
+    glideHeight(body, 40, 0.5)
+    expect(body.y).toBe(70)
+  })
+})
+
+describe('restOnFloor and stepOrSnap', () => {
+  it('rests a flying body on the floor with no velocity or tilt left', () => {
+    const body = spawnBody(8)
+    body.vy = -900
+    restOnFloor(body, 123)
+    expect(body.y).toBe(123)
+    expect([body.vx, body.vy, body.vz]).toEqual([0, 0, 0])
+    expect([body.rx, body.rz]).toEqual([0, 0])
+    expect(body.resting).toBe(true)
+  })
+
+  it('snaps straight to the floor when motion is reduced', () => {
+    const body = spawnBody(8)
+    stepOrSnap(body, 1 / 60, 180, true)
+    expect(body.y).toBe(180)
+    expect(body.resting).toBe(true)
+    expect(body.bounces).toBe(0)
+  })
+
+  it('otherwise integrates like stepBody', () => {
+    const stepped = spawnBody(8)
+    const reference = spawnBody(8)
+    for (let step = 0; step < 90; step += 1) {
+      stepOrSnap(stepped, 1 / 60, 180, false)
+      stepBody(reference, 1 / 60, 180)
+    }
+    expect(stepped).toEqual(reference)
+  })
+})
+
+describe('slideOnFlap', () => {
+  const bodyAt = (z: number): Body => ({ ...spawnBody(1), z })
+
+  it('does not move on a flat flap', () => {
+    const body = bodyAt(80)
+    slideOnFlap(body, 0, 1 / 60, 'walls')
+    expect(body.z).toBe(80)
+  })
+
+  it('slides towards the opening on both flaps when hinged at the walls', () => {
+    const near = bodyAt(80)
+    const far = bodyAt(-80)
+    slideOnFlap(near, rad(40), 1 / 60, 'walls')
+    slideOnFlap(far, rad(40), 1 / 60, 'walls')
+    expect(near.z).toBeCloseTo(80 - (SLIDE_MM_S * Math.sin(rad(40))) / 60, 10)
+    expect(far.z).toBeCloseTo(-near.z, 10)
+  })
+
+  it('slides faster the steeper the flap', () => {
+    const gentle = bodyAt(80)
+    const steep = bodyAt(80)
+    slideOnFlap(gentle, rad(20), 1 / 60, 'walls')
+    slideOnFlap(steep, rad(70), 1 / 60, 'walls')
+    expect(steep.z).toBeLessThan(gentle.z)
+  })
+
+  it('never crosses the centre line', () => {
+    const body = bodyAt(2)
+    slideOnFlap(body, rad(85), 1, 'walls')
+    expect(body.z).toBe(0)
+  })
+
+  it('slides away from the centre line when hinged at the centre', () => {
+    const body = bodyAt(30)
+    slideOnFlap(body, rad(40), 1 / 60, 'center')
+    expect(body.z).toBeGreaterThan(30)
+  })
+})
+
+describe('advanceItem', () => {
+  const FRAME_S = 1 / 60
+  const restMm = ITEM_REST_Y_MM.pet
+  const flapFloor = FLAP.topY + restMm
+  const binFloor = BIN.floorY + restMm
+  const slot: Vec3 = [30, 60, -40]
+  const frame = (overrides: Partial<ItemFrame>): ItemFrame => ({
+    state: 'falling',
+    slot: undefined,
+    deltaS: FRAME_S,
+    servoDeg: 0,
+    restMm,
+    reducedMotion: false,
+    hinge: 'walls',
+    ...overrides,
+  })
+  const run = (body: Body, seconds: number, overrides: Partial<ItemFrame>) => {
+    for (let step = 0; step < seconds * 60; step += 1) advanceItem(body, frame(overrides))
+  }
+  const restingOnFlaps = (seed: number): Body => ({
+    ...spawnBody(seed),
+    y: flapFloor,
+    resting: true,
+  })
+
+  it('drops onto the closed flaps and comes to rest there', () => {
+    const body = spawnBody(11)
+    run(body, 4, { state: 'falling' })
+    expect(body.resting).toBe(true)
+    expect(body.y).toBe(flapFloor)
+  })
+
+  it('keeps resting on the closed flaps while the item waits to be weighed', () => {
+    const body = spawnBody(11)
+    run(body, 4, { state: 'onFlaps' })
+    run(body, 1, { state: 'onFlaps' })
+    expect(body.y).toBe(flapFloor)
+  })
+
+  it('jumps onto the flaps at once when motion is reduced', () => {
+    const body = spawnBody(11)
+    advanceItem(body, frame({ state: 'falling', reducedMotion: true }))
+    expect(body.y).toBe(flapFloor)
+    expect(body.resting).toBe(true)
+  })
+
+  it('rides the opening flap towards the opening before it drops', () => {
+    const body = { ...restingOnFlaps(11), z: 100 }
+    run(body, 0.3, { state: 'dumping', servoDeg: 30, slot })
+    expect(Math.abs(body.z)).toBeLessThan(100)
+    expect(body.y).toBeLessThan(flapFloor)
+  })
+
+  it('falls into its pile slot once the flaps are open', () => {
+    const body = restingOnFlaps(11)
+    run(body, 6, { state: 'dumping', servoDeg: SERVO_CONFIG.openDeg, slot })
+    expect(body.resting).toBe(true)
+    expect(body.x).toBeCloseTo(slot[0], 2)
+    expect(body.z).toBeCloseTo(slot[2], 2)
+    expect(body.y).toBeCloseTo(Math.max(slot[1], binFloor), 6)
+  })
+
+  it('drops to the bin floor when it has no slot yet', () => {
+    const body = restingOnFlaps(11)
+    run(body, 6, { state: 'dumping', servoDeg: SERVO_CONFIG.openDeg, slot: undefined })
+    expect(body.y).toBeCloseTo(binFloor, 6)
+  })
+
+  it('holds the flap floor while the flaps are still closed', () => {
+    const body = { ...restingOnFlaps(11), z: 150 }
+    run(body, 1, { state: 'dumping', servoDeg: 0, slot })
+    expect(body.y).toBe(flapFloor)
+  })
+
+  it('skips the slide and lands in its slot at once when motion is reduced', () => {
+    const body = { ...spawnBody(11), z: 100 }
+    advanceItem(body, frame({ state: 'dumping', servoDeg: 30, slot, reducedMotion: true }))
+    expect(body.resting).toBe(true)
+    expect(body.y).toBeCloseTo(Math.max(slot[1], binFloor), 6)
+    expect(body.z).toBeGreaterThan(slot[2])
+    expect(body.z).toBeLessThan(100)
+  })
+
+  it('settles the pile: items glide into their slots', () => {
+    const body = { ...restingOnFlaps(11), y: binFloor }
+    run(body, 3, { state: 'settled', slot })
+    expect(body.x).toBeCloseTo(slot[0], 2)
+    expect(body.z).toBeCloseTo(slot[2], 2)
+    expect(body.y).toBeCloseTo(Math.max(slot[1], binFloor), 2)
+    expect(body.resting).toBe(true)
+  })
+
+  it('lets a settled item that is still airborne fall into its slot', () => {
+    const body = spawnBody(11)
+    run(body, 6, { state: 'settled', slot })
+    expect(body.resting).toBe(true)
+    expect(body.y).toBeCloseTo(Math.max(slot[1], binFloor), 6)
+  })
+
+  it('leaves a settled item without a slot where it is', () => {
+    const body = spawnBody(11)
+    const before = { ...body }
+    advanceItem(body, frame({ state: 'settled', slot: undefined }))
+    expect(body).toEqual(before)
+  })
+
+  it('does not integrate more than one capped step per frame', () => {
+    const slow = spawnBody(11)
+    const capped = spawnBody(11)
+    advanceItem(slow, frame({ deltaS: 5 }))
+    advanceItem(capped, frame({ deltaS: MAX_FRAME_S }))
+    expect(slow).toEqual(capped)
   })
 })

@@ -501,6 +501,29 @@ export const SENSOR_ANCHORS: readonly SensorAnchor[] = [
 export const LOAD_CELL_PROP = {
   position: [111, 146, 0] as Vec3,
   size: [14, 12, 56] as Vec3,
+  /** Mounting bolts on top of the bar, inset from each end. */
+  boltRadius: 3,
+  boltHeight: 3,
+  boltInsetMm: 7,
+}
+
+/** HC-SR04 module: PCB with both transducer cans looking down. */
+export const PRESENCE_PROP = {
+  /** Gap between the anchor and the PCB. */
+  liftMm: 2,
+  boardSize: [45, 1.6, 20] as Vec3,
+  /** Transducer centres along x, from the board centre. */
+  canOffsetsX: [-13, 13] as const,
+  canDropMm: 7.5,
+  canRadius: 8,
+  canHeight: 13,
+}
+
+/** VL53L0X breakout: PCB with the sensor package under it. */
+export const TOF_PROP = {
+  boardSize: [13, 1.6, 10] as Vec3,
+  lensSize: [4.4, 1.6, 2.4] as Vec3,
+  lensDropMm: 1.6,
 }
 
 /* ------------------------------------------------------------------ */
@@ -604,6 +627,14 @@ export const ITEM_CLEARANCE_MM: Readonly<Record<MaterialId, number>> = {
   hdpe: 50,
   tapas: 14,
   mixta: 57,
+}
+
+/** Height (mm) of an item's centre above the surface it rests on. */
+export const ITEM_REST_Y_MM: Readonly<Record<MaterialId, number>> = {
+  pet: 30,
+  hdpe: 50,
+  tapas: 4.5,
+  mixta: 36,
 }
 
 /* ------------------------------------------------------------------ */
