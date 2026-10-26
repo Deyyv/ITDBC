@@ -5,37 +5,42 @@ import { formatCompactNumber, formatKg } from '../../lib/format'
 
 const PRESETS = [0.8, 2.5, 3.7, 5]
 
+/** Visible keyboard focus on the dark deck. */
+const focusRing =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-lime focus-visible:ring-offset-2 focus-visible:ring-offset-dash-forest'
+
 type WeightControlProps = {
   weightKg: number
+  /** False when there is no load to remove or the coupon sequence is running. */
+  canReset: boolean
   onChange: (weightKg: number) => void
   onSimulate: () => void
   onReset: () => void
 }
 
+/** Manual calibration: places a load of the chosen weight directly on the flaps. */
 export default function WeightControl({
   weightKg,
+  canReset,
   onChange,
   onSimulate,
   onReset,
 }: WeightControlProps) {
   return (
-    <div className="mt-auto pt-4">
+    <div className="pt-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="font-mono text-[0.59rem] tracking-[0.06em] text-white/38">
-            Ajuste de galga
-          </p>
-          <p className="mt-0.5 text-[0.76rem] text-white/58">
-            Desliza para simular la lectura del sensor
-          </p>
+          <p className="text-sm font-semibold text-white/85">Ajuste de galga</p>
+          <p className="mt-0.5 text-xs text-white/70">Desliza para simular la lectura del sensor.</p>
         </div>
         <button
           type="button"
           onClick={onReset}
-          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[0.66rem] font-semibold text-white/60 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signal"
+          disabled={!canReset}
+          className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/25 px-3 text-xs font-semibold text-white/85 transition-colors hover:border-white/45 hover:text-white disabled:cursor-not-allowed disabled:border-white/15 disabled:text-white/55 ${focusRing}`}
         >
-          <RotateCcw size={12} strokeWidth={2.2} aria-hidden="true" />
-          Vaciar
+          <RotateCcw size={13} strokeWidth={2.2} aria-hidden="true" />
+          Retirar carga
         </button>
       </div>
 
@@ -48,17 +53,17 @@ export default function WeightControl({
         onValueChange={([value]) => onChange(value)}
         aria-label="Peso de plástico sobre la galga"
       >
-        <Slider.Track className="relative h-2 grow overflow-hidden rounded-full bg-white/10">
+        <Slider.Track className="relative h-2 grow overflow-hidden rounded-full bg-white/15">
           <Slider.Range className="absolute h-full rounded-full bg-dash-signal" />
         </Slider.Track>
         <Slider.Thumb
-          className="block h-7 w-7 rounded-full border-[3px] border-dash-forest bg-dash-signal shadow-[0_0_0_1px_rgba(58,221,127,0.5),0_4px_14px_rgba(0,0,0,0.35)] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-lime focus-visible:ring-offset-2 focus-visible:ring-offset-dash-forest active:scale-95"
+          className={`block h-7 w-7 rounded-full border-[3px] border-dash-forest bg-dash-signal shadow-[0_4px_14px_rgba(0,0,0,0.35)] transition-transform hover:scale-110 active:scale-95 ${focusRing}`}
           aria-label="Peso de plástico en kilogramos"
           aria-valuetext={`${formatKg(weightKg)} detectados`}
         />
       </Slider.Root>
 
-      <div className="mt-0.5 flex justify-between font-mono text-[0.55rem] text-white/30">
+      <div className="mt-0.5 flex justify-between font-mono text-xs tabular-nums text-white/65" aria-hidden="true">
         <span>0</span>
         <span>1</span>
         <span>2</span>
@@ -75,10 +80,10 @@ export default function WeightControl({
               key={preset}
               type="button"
               onClick={() => onChange(preset)}
-              className={`min-h-9 rounded-full border px-2.5 py-1.5 font-mono text-[0.64rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signal ${
+              className={`min-h-10 rounded-full border px-3 font-mono text-xs tabular-nums transition-colors ${focusRing} ${
                 active
                   ? 'border-dash-signal bg-dash-signal text-dash-forest'
-                  : 'border-white/10 bg-white/[0.04] text-white/60 hover:border-white/20 hover:bg-white/[0.08] hover:text-white'
+                  : 'border-white/20 text-white/80 hover:border-white/40 hover:text-white'
               }`}
               aria-pressed={active}
             >
@@ -89,9 +94,9 @@ export default function WeightControl({
         <button
           type="button"
           onClick={onSimulate}
-          className="ml-auto inline-flex min-h-9 items-center gap-1.5 rounded-full border border-dash-lime/30 bg-dash-lime/[0.07] px-2.5 py-1.5 text-[0.64rem] font-semibold text-dash-lime transition-colors hover:border-dash-lime/50 hover:bg-dash-lime/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-lime"
+          className={`ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-full border border-dash-lime/40 px-3 text-xs font-semibold text-dash-lime transition-colors hover:border-dash-lime hover:bg-dash-lime/10 ${focusRing}`}
         >
-          <Sparkles size={12} strokeWidth={2.1} aria-hidden="true" />
+          <Sparkles size={13} strokeWidth={2.1} aria-hidden="true" />
           Lectura de prueba
         </button>
       </div>

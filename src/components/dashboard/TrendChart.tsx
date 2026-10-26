@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { TrendingUp } from 'lucide-react'
 import {
   WEEKLY_DELTA_PCT,
@@ -7,6 +7,7 @@ import {
   WEEKLY_TREND,
 } from '../../data/dashboard'
 import { formatCompactNumber, formatKg } from '../../lib/format'
+import { goalProgressPct } from '../../lib/impact'
 
 const MAX_VALUE = 30
 const X_PADDING = 4
@@ -30,40 +31,35 @@ const AREA_PATH = `${LINE_PATH} L ${POINTS[POINTS.length - 1].x} 100 L ${POINTS[
 
 const GRID_VALUES = [30, 20, 10, 0]
 
-const goalProgress = Math.min(100, Math.round((WEEKLY_TOTAL / WEEKLY_GOAL) * 100))
+const goalProgress = goalProgressPct(WEEKLY_TOTAL, WEEKLY_GOAL)
 
-export default function TrendChart() {
+function TrendChart() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const activePoint = activeIndex === null ? null : POINTS[activeIndex]
 
   return (
-    <section className="dash-panel dash-trend flex min-h-0 flex-col p-4 xl:p-5" aria-labelledby="trend-title">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-mono text-[0.59rem] tracking-[0.08em] text-dash-muted">
-            03 · Comunidad educativa
-          </p>
-          <h2
-            id="trend-title"
-            className="mt-1 font-disp text-[clamp(1.15rem,1.55vw,1.42rem)] font-medium leading-tight tracking-[-0.02em]"
-          >
-            Lo que recicla el colegio
-          </h2>
-        </div>
+    <section className="dash-panel flex flex-col p-5 sm:p-6" aria-labelledby="trend-title">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h3
+          id="trend-title"
+          className="font-disp text-[1.35rem] font-medium leading-tight tracking-[-0.02em] text-dash-ink"
+        >
+          Lo que recicla el colegio
+        </h3>
         <div className="text-right">
-          <p className="font-disp text-[clamp(1.35rem,2vw,1.8rem)] font-medium leading-none tracking-[-0.03em]">
+          <p className="font-disp text-[1.75rem] font-medium leading-none tracking-[-0.03em] tabular-nums text-dash-ink">
             {formatCompactNumber(WEEKLY_TOTAL, 1)}
-            <span className="ml-1 font-sans text-[0.58rem] font-semibold text-dash-muted">kg</span>
+            <span className="ml-1.5 font-sans text-sm font-semibold tracking-normal text-dash-muted">kg</span>
           </p>
-          <p className="mt-1 inline-flex items-center gap-1 text-[0.58rem] font-semibold text-dash-signalDeep">
-            <TrendingUp size={11} strokeWidth={2.4} aria-hidden="true" />+{WEEKLY_DELTA_PCT}% esta semana
+          <p className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-dash-signalInk">
+            <TrendingUp size={13} strokeWidth={2.4} aria-hidden="true" />+{WEEKLY_DELTA_PCT} % esta semana
           </p>
         </div>
       </div>
 
-      <div className="mt-2 flex min-h-0 flex-1 gap-2">
+      <div className="mt-5 flex gap-2">
         <div
-          className="flex w-5 shrink-0 flex-col justify-between pb-0.5 text-right font-mono text-[0.5rem] leading-none text-dash-muted/65"
+          className="flex h-52 w-6 shrink-0 flex-col justify-between pb-0.5 text-right text-xs leading-none tabular-nums text-dash-muted"
           aria-hidden="true"
         >
           {GRID_VALUES.map((value) => (
@@ -72,7 +68,7 @@ export default function TrendChart() {
         </div>
 
         <div
-          className="relative min-h-[108px] min-w-0 flex-1"
+          className="relative h-52 min-w-0 flex-1"
           onMouseLeave={() => setActiveIndex(null)}
         >
           <svg
@@ -161,9 +157,9 @@ export default function TrendChart() {
               style={{ left: `${activePoint.x}%`, top: `${activePoint.y}%` }}
               aria-hidden="true"
             >
-              <div className="whitespace-nowrap rounded-xl bg-dash-ink px-2.5 py-1.5 text-white shadow-[0_8px_22px_rgba(16,32,26,0.2)]">
-                <p className="font-mono text-[0.55rem] text-white/55">{activePoint.fullLabel}</p>
-                <p className="mt-0.5 font-sans text-[0.72rem] font-bold leading-none text-dash-lime">
+              <div className="whitespace-nowrap rounded-xl bg-dash-ink px-3 py-2 text-white">
+                <p className="text-xs text-white/75">{activePoint.fullLabel}</p>
+                <p className="mt-0.5 font-sans text-sm font-bold leading-none tabular-nums text-dash-lime">
                   {formatKg(activePoint.kg, 1)}
                 </p>
               </div>
@@ -172,11 +168,11 @@ export default function TrendChart() {
         </div>
       </div>
 
-      <div className="relative ml-7 mt-1 h-3" aria-hidden="true">
+      <div className="relative ml-8 mt-2 h-4" aria-hidden="true">
         {POINTS.map((point) => (
           <span
             key={point.label}
-            className="absolute -translate-x-1/2 font-sans text-[0.55rem] text-dash-muted/75"
+            className="absolute -translate-x-1/2 text-xs text-dash-muted"
             style={{ left: `${point.x}%` }}
           >
             {point.label}
@@ -184,12 +180,12 @@ export default function TrendChart() {
         ))}
       </div>
 
-      <div className="mt-auto pt-2">
-        <div className="flex items-center justify-between text-[0.6rem]">
+      <div className="mt-5 border-t border-dash-line pt-4">
+        <div className="flex items-center justify-between text-xs">
           <span className="text-dash-muted">Meta semanal · {WEEKLY_GOAL} kg</span>
-          <span className="font-mono font-semibold text-dash-signalDeep">{goalProgress}%</span>
+          <span className="font-semibold tabular-nums text-dash-signalInk">{goalProgress} %</span>
         </div>
-        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-dash-cement">
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-dash-cement">
           <div
             className="h-full rounded-full bg-dash-signalDeep transition-[width] duration-500"
             style={{ width: `${goalProgress}%` }}
@@ -219,3 +215,6 @@ export default function TrendChart() {
     </section>
   )
 }
+
+/** Static data: memoised so the 10 Hz telemetry of the page never re-renders it. */
+export default memo(TrendChart)
