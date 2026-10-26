@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, useCallback, useMemo } fr
 import { DB } from './services/db.js'
 import { Points } from './services/points.js'
 import { uploadUser } from './services/api.js'
-import { getDiscountForMg, MIN_WEIGHT_LABEL } from './services/discounts.js'
+import { MIN_DISCOUNT_LABEL, discountForMilligrams } from './lib/discount'
 import { buildCoupon } from './services/coupons.js'
 import { STORES } from './data/stores.js'
 
@@ -120,9 +120,9 @@ export function StoreProvider({ children }) {
     const store = STORES.find((s) => s.id === storeId)
     if (!store) return { ok: false, reason: 'bad-store' }
 
-    const discount = getDiscountForMg(user.lastDelivery.mg)
+    const discount = discountForMilligrams(user.lastDelivery.mg)
     if (!discount.pct) {
-      dispatch({ type: 'TOAST', toast: { message: `El peso mínimo para un descuento es ${MIN_WEIGHT_LABEL}`, type: 'error' } })
+      dispatch({ type: 'TOAST', toast: { message: `El peso mínimo para un descuento es ${MIN_DISCOUNT_LABEL}`, type: 'error' } })
       return { ok: false, reason: 'low-weight' }
     }
 

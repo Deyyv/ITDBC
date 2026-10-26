@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { DISCOUNT_PER_KG, MAX_DISCOUNT_PCT, SCALE_MAX_KG } from '../lib/discount'
 
 const ITEMS = [
   {
     id: 'faq1',
     q: '¿Cómo sé qué descuento me corresponde?',
-    a: 'Depende del peso de tu última entrega: 250 g–1 kg = 5 %, 1–3 kg = 10 %, 3–5 kg = 15 % y 5 kg o más = 25 %.',
+    a: `Depende del peso de tu última entrega: ${DISCOUNT_PER_KG} % por cada kilo reciclado, hasta ${MAX_DISCOUNT_PCT} % con ${SCALE_MAX_KG} kg.`,
   },
   {
     id: 'faq2',

@@ -1,18 +1,22 @@
 import { QRCodeCanvas } from 'qrcode.react'
 import { Recycle } from 'lucide-react'
 import { STORES } from '../data/stores.js'
+import { MAX_DISCOUNT_PCT, calculateDiscount } from '../lib/discount'
 
 const FACTS = [
   { value: '3', label: 'tiendas aliadas' },
-  { value: '5–25 %', label: 'de descuento por peso' },
+  { value: `${MAX_DISCOUNT_PCT} %`, label: 'de descuento máximo por peso' },
   { value: '7 días', label: 'de validez del cupón' },
 ]
+
+const SAMPLE_WEIGHT_KG = 2.5
+const SAMPLE_PCT = calculateDiscount(SAMPLE_WEIGHT_KG).pct
 
 const SAMPLE_PAYLOAD = [
   'RECICLAPOINT — CUPÓN DE DESCUENTO',
   'Tienda aliada: EcoMarket',
-  'Descuento: 10%',
-  'Material reciclado: 2.50 kg',
+  `Descuento: ${SAMPLE_PCT}%`,
+  `Material reciclado: ${SAMPLE_WEIGHT_KG.toFixed(2)} kg`,
   'Código: RP-ECM-DEM0',
   'Válido hasta: 2026-10-01',
 ].join('\n')
@@ -59,7 +63,7 @@ export default function Hero() {
                 <Recycle size={18} className="text-hoja" />
                 ReciclaPoint
               </span>
-              <span className="rounded-full bg-cascara text-sombra text-xs font-bold px-2.5 py-1">-10 %</span>
+              <span className="rounded-full bg-cascara text-sombra text-xs font-bold px-2.5 py-1">-{SAMPLE_PCT} %</span>
             </div>
             <div className="rounded-xl bg-white border-2 border-dashed border-fibra p-4 flex justify-center">
               <QRCodeCanvas value={SAMPLE_PAYLOAD} size={168} fgColor="#152B1E" bgColor="#FFFFFF" level="M" />

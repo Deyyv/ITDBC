@@ -20,10 +20,14 @@ marked as advice.
   `TwinCanvas` and every module that imports three.js load through `React.lazy`.
 - Hardware constants (sensors, servo, part transforms, colours) live only in
   `src/lib/basket/config.ts`.
+- One discount rule everywhere: `src/lib/discount.ts` (6 % per kg, capped at 30 % at 5 kg). Legacy
+  views and the legacy store must call it (`calculateDiscount`, `discountForMilligrams`); never
+  duplicate tiers or percentages in components, copy or `src/services/`.
 - Legacy exception: the legacy views (`RegisterView`, `BalanceView`, `StoresView`, `PublicView`)
-  still read points and discounts from `src/services/` until they are migrated to `src/lib/`.
-  Importing those services from the legacy views is not a violation; new code must not add more
-  logic to `src/services/`.
+  and the legacy store (`src/store.jsx`) still read points (`src/services/points.js`) and data
+  (`src/services/db.js`, `src/services/api.js`, `src/services/coupons.js`) from `src/services/`
+  until they are migrated to `src/lib/`. Importing those services from the legacy views and the
+  legacy store is not a violation; new code must not add more logic to `src/services/`.
 
 ## TypeScript
 
