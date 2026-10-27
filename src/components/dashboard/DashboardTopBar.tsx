@@ -1,80 +1,125 @@
-import { ArrowUpRight, Store } from 'lucide-react'
+import { memo } from 'react'
+import { ArrowUpRight, Store, Wallet } from 'lucide-react'
+import { DASH_SECTIONS, DASH_SECTION_IDS } from '../../data/dashboard'
+import { useActiveSection } from '../../hooks/useActiveSection'
+import { formatDbm } from '../../lib/format'
 import BrandMark from './BrandMark'
 
-export default function DashboardTopBar() {
+type DashboardTopBarProps = {
+  /** Live Wi-Fi signal of the ESP32, shown in the status chip. */
+  rssiDbm: number
+}
+
+function LiveDot() {
   return (
-    <>
-    <header className="dash-topbar">
-      <a
-        href="#/"
-        className="group flex min-w-0 items-center gap-3 rounded-2xl pr-2 outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-dash-signalDeep focus-visible:ring-offset-4 focus-visible:ring-offset-dash-cement"
-        aria-label="ReciclaPoint, ir al panel principal"
-      >
-        <BrandMark size={42} className="shrink-0 transition-transform duration-300 group-hover:-rotate-3" />
-        <span className="min-w-0">
-          <span className="block truncate font-disp text-[1.28rem] font-semibold leading-none tracking-[-0.025em] text-dash-ink sm:text-[1.42rem]">
-            ReciclaPoint
-          </span>
-          <span className="mt-1 hidden font-mono text-[0.63rem] tracking-[0.04em] text-dash-muted sm:block">
-            Cesta inteligente · galga 5 kg
-          </span>
-        </span>
-      </a>
+    <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+      <span className="absolute inline-flex h-full w-full rounded-full bg-dash-signalDeep opacity-60 motion-safe:animate-ping" />
+      <span className="relative inline-flex h-2 w-2 rounded-full bg-dash-signalDeep" />
+    </span>
+  )
+}
 
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2.5">
-        <span className="hidden items-center gap-2 rounded-full border border-dash-line bg-white/60 px-3 py-1.5 font-mono text-[0.62rem] text-dash-muted lg:inline-flex">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-dash-signalDeep opacity-60" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-dash-signalDeep" />
-          </span>
-          Estación activa
-        </span>
+function StatusChip({ rssiDbm, compact = false }: { rssiDbm: number; compact?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border border-dash-line bg-white/70 px-3 py-1.5 text-xs font-semibold text-dash-muted">
+      <LiveDot />
+      <span>
+        {compact ? 'En línea' : 'ESP32 en línea'}
+        <span className="tabular-nums"> · {formatDbm(rssiDbm)}</span>
+      </span>
+    </span>
+  )
+}
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label="Accesos de la estación">
+function scrollToTop() {
+  window.scrollTo(0, 0)
+}
+
+function DashboardTopBar({ rssiDbm }: DashboardTopBarProps) {
+  const active = useActiveSection(DASH_SECTION_IDS)
+
+  const sectionLinks = DASH_SECTIONS.map((section) => (
+    <a
+      key={section.id}
+      href={`#${section.id}`}
+      aria-current={active === section.id ? 'location' : undefined}
+      className="site-link"
+    >
+      {section.label}
+    </a>
+  ))
+
+  return (
+    <header className="site-header">
+      <div className="dash-container">
+        <div className="flex min-h-14 items-center justify-between gap-3 lg:min-h-16">
           <a
-            href="#saldo"
-            className="rounded-full px-3 py-2 text-[0.82rem] font-semibold text-dash-muted transition-colors hover:bg-white/70 hover:text-dash-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signalDeep"
+            href="#/"
+            onClick={scrollToTop}
+            className="flex min-w-0 items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signalInk focus-visible:ring-offset-2 focus-visible:ring-offset-dash-cement"
+            aria-label="ReciclaPoint, ir al inicio del panel"
           >
+            <BrandMark size={36} className="shrink-0" />
+            <span className="min-w-0">
+              <span className="block truncate font-disp text-xl font-semibold leading-none tracking-tight text-dash-ink">
+                ReciclaPoint
+              </span>
+              <span className="mt-1 hidden text-xs leading-none text-dash-muted xl:block">
+                Cesta inteligente de reciclaje
+              </span>
+            </span>
+          </a>
+
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Secciones del panel">
+            {sectionLinks}
+          </nav>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            <span
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-dash-line bg-white/70 sm:hidden"
+              title={`ESP32 en línea, ${formatDbm(rssiDbm)}`}
+            >
+              <LiveDot />
+              <span className="sr-only">ESP32 en línea, {formatDbm(rssiDbm)}</span>
+            </span>
+            <div className="hidden sm:block lg:hidden">
+              <StatusChip rssiDbm={rssiDbm} compact />
+            </div>
+            <div className="hidden xl:block">
+              <StatusChip rssiDbm={rssiDbm} />
+            </div>
+            <a href="#saldo" className="site-link hidden lg:inline-flex">
+              <Wallet size={15} strokeWidth={2} aria-hidden="true" />
+              Mi saldo
+            </a>
+            <a href="#tiendas" className="site-link hidden lg:inline-flex">
+              <Store size={15} strokeWidth={2} aria-hidden="true" />
+              Tienda
+            </a>
+            <a href="#registrar" className="site-cta">
+              <span className="hidden sm:inline">Registrar entrega</span>
+              <span className="sm:hidden">Registrar</span>
+              <ArrowUpRight size={15} strokeWidth={2.3} aria-hidden="true" />
+            </a>
+          </div>
+        </div>
+
+        <nav
+          className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto px-4 pb-2 lg:hidden"
+          aria-label="Secciones y accesos del panel"
+        >
+          {sectionLinks}
+          <span className="mx-1 h-5 w-px shrink-0 bg-dash-line" aria-hidden="true" />
+          <a href="#saldo" className="site-link">
             Mi saldo
           </a>
-          <a
-            href="#tiendas"
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-[0.82rem] font-semibold text-dash-muted transition-colors hover:bg-white/70 hover:text-dash-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signalDeep"
-          >
-            <Store size={14} strokeWidth={2} aria-hidden="true" />
+          <a href="#tiendas" className="site-link">
             Tienda
           </a>
         </nav>
-
-        <a
-          href="#registrar"
-          className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-dash-ink px-3 py-2 text-[0.78rem] font-semibold text-white transition-transform hover:-translate-y-0.5 hover:bg-dash-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signalDeep focus-visible:ring-offset-2 focus-visible:ring-offset-dash-cement active:translate-y-0 sm:px-4 sm:text-[0.82rem]"
-        >
-          <span className="hidden sm:inline">Registrar entrega</span>
-          <span className="sm:hidden">Registrar</span>
-          <ArrowUpRight size={15} strokeWidth={2.3} aria-hidden="true" />
-        </a>
       </div>
     </header>
-
-    <nav className="-mt-1 flex items-center gap-1.5 md:hidden" aria-label="Accesos rápidos">
-      <a
-        href="#saldo"
-        className="inline-flex min-h-9 items-center rounded-full border border-dash-line bg-white/65 px-3 py-1.5 text-[0.7rem] font-semibold text-dash-muted transition-colors hover:bg-white hover:text-dash-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signalDeep"
-      >
-        Mi saldo
-      </a>
-      <a
-        href="#tiendas"
-        className="inline-flex min-h-9 items-center gap-1 rounded-full border border-dash-line bg-white/65 px-3 py-1.5 text-[0.7rem] font-semibold text-dash-muted transition-colors hover:bg-white hover:text-dash-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signalDeep"
-      >
-        <Store size={13} strokeWidth={2} aria-hidden="true" />
-        Tienda
-      </a>
-      <span className="ml-auto font-mono text-[0.54rem] tracking-[0.02em] text-dash-muted/75">
-        Galga 5 kg
-      </span>
-    </nav>
-    </>
   )
 }
+
+export default memo(DashboardTopBar)

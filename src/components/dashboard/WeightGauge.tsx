@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { SCALE_MAX_KG, clampWeight } from '../../lib/discount'
 import { formatCompactNumber } from '../../lib/format'
 
@@ -32,7 +33,7 @@ type WeightGaugeProps = {
   weightKg: number
 }
 
-export default function WeightGauge({ weightKg }: WeightGaugeProps) {
+function WeightGauge({ weightKg }: WeightGaugeProps) {
   const safeWeight = clampWeight(weightKg)
   const progress = safeWeight / SCALE_MAX_KG
   const needlePoint = polar(angleForWeight(safeWeight), RADIUS - 11)
@@ -40,11 +41,11 @@ export default function WeightGauge({ weightKg }: WeightGaugeProps) {
 
   return (
     <div
-      className="relative mx-auto w-full max-w-[370px]"
+      className="relative mx-auto w-full max-w-[260px]"
       role="img"
       aria-label={`Galga de carga: ${formatCompactNumber(safeWeight, 2)} kilogramos de ${SCALE_MAX_KG} kilogramos`}
     >
-      <svg viewBox="0 0 320 216" className="w-full overflow-visible" aria-hidden="true">
+      <svg viewBox="0 0 320 236" className="w-full overflow-visible" aria-hidden="true">
         <path
           d={arcPath()}
           fill="none"
@@ -93,7 +94,7 @@ export default function WeightGauge({ weightKg }: WeightGaugeProps) {
               y={label.y}
               textAnchor="middle"
               dominantBaseline="middle"
-              fontSize="9.5"
+              fontSize="17"
               fontFamily="ui-monospace, SFMono-Regular, Consolas, monospace"
               className="dash-gauge-caption"
             >
@@ -126,17 +127,14 @@ export default function WeightGauge({ weightKg }: WeightGaugeProps) {
         <circle cx={CX} cy={CY} r="3.2" fill="var(--dash-lime)" opacity={safeWeight > 0 ? 0.9 : 0.3} />
       </svg>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-[3%] text-center">
-        <div className="flex items-start justify-center gap-1.5">
-          <span className="font-disp text-[clamp(2.7rem,6.2vh,4.4rem)] font-medium leading-[0.86] tracking-[-0.045em] text-white">
-            {formatCompactNumber(safeWeight, 2)}
-          </span>
-          <span className="mt-1.5 font-mono text-[0.65rem] text-white/45">kg</span>
-        </div>
-        <p className="mt-1.5 font-mono text-[0.57rem] tracking-[0.04em] text-white/38">
-          Peso sobre la galga
+      <div className="pointer-events-none absolute inset-x-0 top-[49%] text-center">
+        <p className="font-disp text-[2.5rem] font-medium leading-[0.9] tracking-[-0.03em] tabular-nums text-white">
+          {formatCompactNumber(safeWeight, 2)}
         </p>
+        <p className="mt-1 text-xs font-semibold text-white/70">kg</p>
       </div>
     </div>
   )
 }
+
+export default memo(WeightGauge)

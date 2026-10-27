@@ -1,28 +1,47 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Store, Scale, Inbox, QrCode, Percent } from 'lucide-react'
 import { STORES } from '../data/stores.js'
-import { DISCOUNT_TIERS, getDiscountForMg, MIN_WEIGHT_LABEL } from '../services/discounts.js'
+import {
+  DISCOUNT_PER_KG,
+  MAX_DISCOUNT_PCT,
+  MIN_DISCOUNT_LABEL,
+  SCALE_MAX_KG,
+  discountExamples,
+  discountForMilligrams,
+} from '../lib/discount'
+import { formatKg, formatPct } from '../lib/format'
 import { DB } from '../services/db.js'
 import { useStore } from '../store.jsx'
 import CouponCard from './CouponCard.jsx'
 
-function ScaleTable() {
+const formatExampleKg = (kg) => formatKg(kg, Number.isInteger(kg) ? 0 : 1)
+
+function DiscountRule() {
   return (
     <div className="card">
-      <h3 className="font-disp font-medium text-tinta mb-4 inline-flex items-center gap-2">
+      <h3 className="font-disp font-medium text-tinta mb-2 inline-flex items-center gap-2">
         <Percent size={18} className="text-cascara" aria-hidden="true" />
         Descuento según peso reciclado
       </h3>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {DISCOUNT_TIERS.map((t) => (
-          <div key={t.pct} className="rounded-2xl border border-follaje/10 bg-lavada/70 px-3 py-4 text-center">
-            <div className="font-disp font-semibold text-[1.6rem] text-cascara leading-none">{t.pct}%</div>
-            <div className="text-xs text-suave mt-1">{t.label}</div>
-          </div>
+      <p className="text-tinta text-sm mb-4">
+        {formatPct(DISCOUNT_PER_KG)} por cada kilo reciclado, hasta {formatPct(MAX_DISCOUNT_PCT)} con {formatKg(SCALE_MAX_KG, 0)}.
+      </p>
+      <ul className="grid grid-cols-3 gap-3">
+        {discountExamples().map((example) => (
+          <li
+            key={example.weightKg}
+            className="rounded-2xl border border-follaje/10 bg-lavada/70 px-3 py-4 text-center"
+          >
+            <div className="font-disp font-semibold text-[1.6rem] text-cascara leading-none">
+              {formatPct(example.pct)}
+            </div>
+            <div className="text-xs text-suave mt-1">con {formatExampleKg(example.weightKg)}</div>
+          </li>
         ))}
-      </div>
+      </ul>
       <p className="text-suave text-xs mt-4">
-        El porcentaje se calcula con el peso de tu última entrega registrada. Mínimo {MIN_WEIGHT_LABEL} para participar.
+        El porcentaje se calcula con el peso de tu última entrega registrada. Desde {MIN_DISCOUNT_LABEL} ya obtienes
+        un descuento de {formatPct(1)}.
       </p>
     </div>
   )
@@ -64,7 +83,7 @@ function NoWeightState({ weightLabel }) {
   return (
     <div className="card text-center py-8 border-cascara/40">
       <p className="text-tinta font-semibold">
-        Tu última entrega es de <strong>{weightLabel}</strong>, aún no llega a {MIN_WEIGHT_LABEL}.
+        Tu última entrega es de <strong>{weightLabel}</strong>, aún no llega a {MIN_DISCOUNT_LABEL}, el mínimo para obtener descuento.
       </p>
       <p className="text-suave text-sm mt-1 mb-5">Registra más material reciclado para desbloquear tu descuento.</p>
       <a href="#registrar" className="btn btn--follaje">Registrar más reciclaje</a>
@@ -72,9 +91,8 @@ function NoWeightState({ weightLabel }) {
   )
 }
 
-function UserBanner({ user }) {
+function UserBanner({ user, discountPct }) {
   if (!user || !user.lastDelivery) return null
-  const discount = getDiscountForMg(user.lastDelivery.mg)
   return (
     <div className="card flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-3">
@@ -88,7 +106,7 @@ function UserBanner({ user }) {
       </div>
       <div className="text-right">
         <p className="text-suave text-xs">Tu descuento disponible</p>
-        <p className="font-disp font-semibold text-[2.6rem] text-follaje leading-none">{discount.pct}%</p>
+        <p className="font-disp font-semibold text-[2.6rem] text-follaje leading-none">{discountPct}%</p>
       </div>
     </div>
   )
@@ -124,16 +142,12 @@ function CouponHistory({ coupons }) {
 export default function StoresView() {
   const { state, generateCoupon, clearCoupon } = useStore()
   const [selectedStore, setSelectedStore] = useState(null)
-  const [coupons, setCoupons] = useState([])
 
   const currentEmail = state.currentEmail
   const user = currentEmail ? DB.getUser(currentEmail) : null
   const lastDelivery = user ? user.lastDelivery : null
-  const availableDiscount = lastDelivery ? getDiscountForMg(lastDelivery.mg) : null
-
-  useEffect(() => {
-    setCoupons(user && user.coupons ? user.coupons : [])
-  }, [currentEmail, state.lastCoupon]) // eslint-disable-line react-hooks/exhaustive-deps
+  const availableDiscount = lastDelivery ? discountForMilligrams(lastDelivery.mg) : null
+  const coupons = user && user.coupons ? user.coupons : []
 
   const handleSelect = (store) => {
     setSelectedStore(store)
@@ -143,25 +157,24 @@ export default function StoresView() {
   return (
     <section id="tiendas" className="bg-lavada py-16 sm:py-24" data-testid="section-shop">
       <div className="wrap">
-        <p className="kicker kiss">Tiendas aliadas</p>
-        <h2 className="section-title">Genera tu cupón de descuento</h2>
+        <h2 className="section-title">Genera tu cupón de descuento en una tienda aliada</h2>
         <p className="text-suave max-w-[52ch] mb-8">
           Elige una tienda aliada y genera tu QR de descuento a partir del peso que reciclaste.
         </p>
 
         {!currentEmail && <div className="mb-6"><NoUserState /></div>}
         {currentEmail && lastDelivery && availableDiscount && availableDiscount.pct > 0 && (
-          <div className="mb-6"><UserBanner user={user} /></div>
+          <div className="mb-6"><UserBanner user={user} discountPct={availableDiscount.pct} /></div>
         )}
         {currentEmail && !lastDelivery && <div className="mb-6"><NoDeliveryState /></div>}
         {currentEmail && lastDelivery && availableDiscount && availableDiscount.pct === 0 && (
           <div className="mb-6"><NoWeightState weightLabel={lastDelivery.label} /></div>
         )}
 
-        <div className="mb-6"><ScaleTable /></div>
+        <div className="mb-6"><DiscountRule /></div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {STORES.map((store, idx) => {
+          {STORES.map((store) => {
             const Icon = store.Icon
             const active = selectedStore && selectedStore.id === store.id
             return (
@@ -178,7 +191,7 @@ export default function StoresView() {
                   </span>
                 </div>
                 <div className="p-6 flex flex-col gap-2 flex-1">
-                  <p className="producto-tag">Tienda aliada 0{idx + 1}</p>
+                  <p className="producto-tag">Tienda aliada</p>
                   <h3 className="font-disp font-medium text-[1.55rem] tracking-tight text-tinta">{store.name}</h3>
                   <p className="text-suave text-sm font-semibold">{store.tagline}</p>
                   <p className="text-suave text-[0.95rem] flex-1">{store.desc}</p>
@@ -192,11 +205,9 @@ export default function StoresView() {
           })}
         </div>
 
-        {state.lastCoupon && (
-          <div className="mt-6 max-w-3xl">
-            <CouponCard coupon={state.lastCoupon} onClose={clearCoupon} />
-          </div>
-        )}
+        <div className="mt-6 max-w-3xl empty:hidden" aria-live="polite">
+          {state.lastCoupon && <CouponCard coupon={state.lastCoupon} onClose={clearCoupon} />}
+        </div>
 
         <CouponHistory coupons={coupons} />
       </div>

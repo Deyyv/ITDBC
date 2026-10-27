@@ -1,6 +1,8 @@
+import { MAX_DISCOUNT_PCT } from '../lib/discount'
+
 const NUMBERS = [
   { value: '3', label: 'tiendas aliadas del barrio' },
-  { value: '5–25 %', label: 'de descuento según el peso reciclado' },
+  { value: `${MAX_DISCOUNT_PCT} %`, label: 'de descuento máximo según el peso reciclado' },
   { value: '7 días', label: 'de validez para cada cupón QR' },
 ]
 

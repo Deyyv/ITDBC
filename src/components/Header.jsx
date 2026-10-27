@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Recycle, Menu, X } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
+import BrandMark from './dashboard/BrandMark'
 
 export const NAV_LINKS = [
   { href: '#/', label: 'Panel' },
@@ -8,62 +8,58 @@ export const NAV_LINKS = [
   { href: '#tiendas', label: 'Tiendas' },
 ]
 
+function isCurrent(href) {
+  const hash = window.location.hash
+  if (href === '#tiendas') return hash === '#tiendas' || hash === '#tienda'
+  return hash === href
+}
+
+/** Top bar of the legacy routes: same chrome as the dashboard, links to every section. */
 export default function Header() {
-  const [open, setOpen] = useState(false)
+  const links = NAV_LINKS.map((link) => (
+    <a
+      key={link.href}
+      href={link.href}
+      aria-current={isCurrent(link.href) ? 'page' : undefined}
+      className="site-link"
+    >
+      {link.label}
+    </a>
+  ))
 
   return (
-    <header className="sticky top-0 z-50 bg-sombra text-blanco shadow-[0_1px_0_rgba(247,250,244,0.08)]">
-      <div className="wrap flex items-center justify-between gap-4" style={{ minHeight: 'var(--header-h)' }}>
-        <a href="#/" className="flex items-center gap-2.5" aria-label="ReciclaPoint, panel principal">
-          <span className="flex w-10 h-10 items-center justify-center rounded-full bg-fibra text-sombra">
-            <Recycle size={22} strokeWidth={1.9} aria-hidden="true" />
-          </span>
-          <span className="font-disp text-[1.3rem] font-semibold tracking-tight">ReciclaPoint</span>
-        </a>
-
-        <nav className="hidden lg:flex items-center gap-0.5" aria-label="Principal">
-          {NAV_LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="px-3.5 py-2 rounded-full text-blanco/80 font-medium text-[0.95rem] transition-colors hover:text-fibra hover:bg-blanco/[0.06]"
-            >
-              {l.label}
-            </a>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-2.5">
-          <span className="hidden sm:inline-flex items-center gap-2 rounded-full border border-fibra/40 bg-fibra/10 text-fibra text-xs font-semibold px-3 py-1.5">
-            <span className="w-2 h-2 rounded-full bg-cascara animate-pulse-dot" />
-            Estación activa
-          </span>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
-            className="lg:hidden inline-flex items-center justify-center w-11 h-11 rounded-xl hover:bg-blanco/[0.08] transition-colors"
+    <header className="site-header">
+      <div className="dash-container">
+        <div className="flex min-h-14 items-center justify-between gap-3 md:min-h-16">
+          <a
+            href="#/"
+            className="inline-flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dash-signalInk focus-visible:ring-offset-2 focus-visible:ring-offset-dash-cement"
+            aria-label="ReciclaPoint, volver al panel"
           >
-            {open ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
-          </button>
-        </div>
-      </div>
+            <BrandMark size={36} />
+            <span className="font-disp text-xl font-semibold leading-none tracking-tight text-dash-ink">
+              ReciclaPoint
+            </span>
+          </a>
 
-      {open && (
-        <nav className="lg:hidden border-t border-blanco/10 bg-sombra px-4 py-3 flex flex-col gap-1" aria-label="Menú móvil">
-          {NAV_LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              className="px-4 py-2.5 rounded-xl text-blanco/85 font-medium hover:bg-blanco/[0.07] hover:text-fibra"
-            >
-              {l.label}
-            </a>
-          ))}
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Principal">
+            {links}
+          </nav>
+
+          <a href="#/" className="site-cta">
+            <ArrowLeft size={15} strokeWidth={2.3} aria-hidden="true" />
+            <span className="hidden sm:inline">Volver al panel</span>
+            <span className="sm:hidden">Panel</span>
+          </a>
+        </div>
+
+        <nav
+          className="no-scrollbar -mx-4 flex items-center gap-1 overflow-x-auto px-4 pb-2 md:hidden"
+          aria-label="Secciones"
+        >
+          {links}
         </nav>
-      )}
+      </div>
     </header>
   )
 }

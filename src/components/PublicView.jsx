@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
 import { RefreshCw, SearchX, WifiOff } from 'lucide-react'
-import { fetchShared } from '../services/api.js'
+import { useSharedLookup } from '../hooks/useSharedLookup'
 import Header from './Header.jsx'
 import Footer from './Footer.jsx'
 import PointsCore from './points/PointsCore.jsx'
@@ -10,8 +9,7 @@ function PublicHeader({ token }) {
   const short = token.startsWith('t-') ? token.slice(2, 8) : token.slice(0, 6)
   return (
     <div className="card max-w-3xl mx-auto mb-6 text-center">
-      <p className="kicker kiss">Verificación de puntos</p>
-      <h2 className="font-disp text-2xl font-medium text-tinta">Comprobante recibido por QR</h2>
+      <h2 className="font-disp text-2xl font-medium text-tinta">Verificación de puntos: comprobante recibido por QR</h2>
       <p className="text-suave text-sm mt-1 font-mono">#{short}</p>
     </div>
   )
@@ -19,7 +17,7 @@ function PublicHeader({ token }) {
 
 function LoadingState() {
   return (
-    <div className="text-center py-12" data-testid="public-loading">
+    <div className="text-center py-12" role="status" data-testid="public-loading">
       <div className="relative w-20 h-20 mx-auto mb-4">
         <span className="absolute inset-0 rounded-full border border-hoja/20 animate-breath" />
         <RefreshCw className="animate-spin text-hoja absolute inset-0 m-auto" size={28} strokeWidth={1.8} aria-hidden="true" />
@@ -31,7 +29,7 @@ function LoadingState() {
 
 function NotFoundState() {
   return (
-    <div className="text-center py-12" data-testid="public-not-found">
+    <div className="text-center py-12" role="status" data-testid="public-not-found">
       <div className="relative w-20 h-20 mx-auto mb-4">
         <span className="absolute inset-0 rounded-full border border-hoja/20 animate-breath" />
         <SearchX size={30} strokeWidth={1.6} className="text-hoja absolute inset-0 m-auto" aria-hidden="true" />
@@ -44,7 +42,7 @@ function NotFoundState() {
 
 function ErrorState({ onRetry }) {
   return (
-    <div className="text-center py-12" data-testid="public-error">
+    <div className="text-center py-12" role="alert" data-testid="public-error">
       <div className="relative w-20 h-20 mx-auto mb-4">
         <span className="absolute inset-0 rounded-full border border-hoja/20 animate-breath" />
         <WifiOff size={28} strokeWidth={1.6} className="text-hoja absolute inset-0 m-auto" aria-hidden="true" />
@@ -59,29 +57,7 @@ function ErrorState({ onRetry }) {
 }
 
 export default function PublicView({ token }) {
-  const [status, setStatus] = useState('loading')
-  const [data, setData] = useState(null)
-  const [attempt, setAttempt] = useState(0)
-
-  useEffect(() => {
-    let cancelled = false
-    setStatus('loading')
-    fetchShared(token)
-      .then((res) => {
-        if (cancelled) return
-        setData(res)
-        setStatus('ok')
-      })
-      .catch((err) => {
-        if (cancelled) return
-        setStatus(err && err.status === 404 ? 'notfound' : 'error')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [token, attempt])
-
-  const retry = () => setAttempt((n) => n + 1)
+  const { status, data, retry } = useSharedLookup(token)
 
   return (
     <div className="min-h-screen flex flex-col bg-lavada text-tinta">

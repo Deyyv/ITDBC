@@ -22,7 +22,6 @@ export default function RegisterView() {
   return (
     <section id="registrar" className="bg-lavada py-16 sm:py-24" data-testid="section-register">
       <div className="wrap">
-        <p className="kicker kiss">Empieza aquí</p>
         <h2 className="section-title">Registrar una entrega</h2>
 
         <div className="card max-w-3xl">
@@ -92,11 +91,11 @@ export default function RegisterView() {
           </form>
         </div>
 
-        {showResult && (
-          <div className="mt-6 max-w-3xl">
+        <div className="mt-6 max-w-3xl empty:hidden" aria-live="polite">
+          {showResult && (
             <ResultCard registration={state.registration} onClose={closeResult} />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </section>
   )
