@@ -65,6 +65,15 @@ src/
 └─ data/dashboard.ts
 ```
 
+## Firmware del prototipo (Arduino Uno)
+
+Los sketches del equipo físico están en `firmware/` (ábralos con el IDE de Arduino; cada carpeta lleva el nombre de su `.ino`).
+
+1. **`firmware/Mapeo_servos_360/`**: herramienta de calibración de los servos MG995 de rotación continua. Mide para cada hoja el pulso de abrir, de cerrar y de reposo, y los tiempos de cada movimiento. El comando `r` imprime las líneas para pegar en el firmware.
+2. **`firmware/ecoladrillos_cesta/`**: firmware de la compuerta. El botón verde descarga (abre, espera y cierra por tiempo), el azul abre y cierra en modo mantenimiento, el HC-SR04 bloquea la descarga con la cesta llena y la LCD 16×2 I²C muestra el estado. Esta versión no usa galgas, QR, OLED ni buzzer.
+
+Librería necesaria: "LiquidCrystal I2C" (Frank de Brabander). Los servos van a la fuente externa de 5 V / 5 A con GND común al Arduino.
+
 ## Revisión de código
 
 Cada commit pasa por Gentleman Guardian Angel (`gga`), con las reglas de `AGENTS.md`.
