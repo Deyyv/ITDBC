@@ -1,0 +1,11 @@
+# Not needed to build or serve the site
+screenshots/
+Modelado/
+mockup/
+.atl/
+.agents/
+.claude/
+.data/
+.env
+.env.local
+.env.*.local

@@ -73,16 +73,28 @@ Cada commit pasa por Gentleman Guardian Angel (`gga`), con las reglas de `AGENTS
 
 Las carpetas de `screenshots/` conservan iteraciones anteriores del diseño.
 
-## Despliegue en Vercel + Upstash Redis
+## Despliegue en Vercel
 
-1. **Crear proyecto en Vercel** e importar este repo (Vite se detecta solo; el directorio `api/` se convierte en funciones serverless).
-2. **Instalar la integración "Upstash Redis"** (Vercel Marketplace) y enlazar el proyecto. Crear una base de datos; Vercel inyecta automáticamente `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`. Redeploy.
-   - Nota: Vercel KV está deprecado; su reemplazo es Upstash Redis (`@upstash/redis`), ya incluido en `package.json`.
-3. **Definir variables de entorno** (Project > Settings > Environment Variables):
-   - `VITE_API_SYNC=1` → activa el sync del kiosco hacia Upstash.
-   - `VITE_APP_URL=https://TUDOMINIO.vercel.app` → base de la URL que se codifica en el QR (`/#share/<token>`).
+La configuración está en `vercel.json` (framework Vite, `npm ci`, salida `dist/`, cache de `/assets` y `/models`, headers de seguridad) y `.vercelignore` deja fuera las capturas y los STL fuente.
 
-Con eso: el kiosco registra entregas y las sube a Upstash; el QR del comprobante abre `/#share/<token>`, una vista pública de solo lectura con puntos e historial en vivo.
+### 1. Solo la página y la simulación 3D
+
+1. En Vercel: **Add New → Project** e importar este repositorio de GitHub.
+2. Dejar los valores que detecta (Framework: Vite, Root Directory: `./`) y pulsar **Deploy**.
+
+No hace falta ninguna variable de entorno: el panel, el gemelo 3D, la telemetría y los cupones del simulador funcionan solo en el navegador.
+
+### 2. Comprobantes compartidos con QR (opcional)
+
+El flujo legacy (`#registrar` → QR → `#share/<token>`) guarda las entregas en Upstash Redis a través de las funciones de `api/`.
+
+1. **Instalar la integración "Upstash for Redis"** (Vercel Marketplace), crear una base de datos y enlazarla al proyecto. Las funciones aceptan tanto `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` como `KV_REST_API_URL` / `KV_REST_API_TOKEN`.
+2. **Definir variables de entorno** (Project → Settings → Environment Variables):
+   - `VITE_API_SYNC=1` → activa el envío de entregas hacia la API.
+   - `VITE_APP_URL=https://TUDOMINIO.vercel.app` → base de la URL del QR (opcional; por defecto usa el dominio actual).
+3. **Redeploy** para que el build tome las variables `VITE_*`.
+
+Sin Redis configurado, `api/sync` y `api/share` responden `503` con un mensaje claro en vez de fallar, y la página compartida muestra su estado de error con opción de reintentar.
 
 ## Desarrollo local de la API
 
